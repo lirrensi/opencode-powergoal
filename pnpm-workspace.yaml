@@ -1,0 +1,5 @@
+allowBuilds:
+  msgpackr-extract: set this to true or false
+minimumReleaseAgeExclude:
+  - "@opencode-ai/*"
+onlyBuiltDependencies: msgpackr-extract
