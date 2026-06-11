@@ -33,30 +33,7 @@ set a new goal programmatically.
 
 ## Installation
 
-### Via npm
-
-```bash
-npm install opencode-powergoal
-pnpm add opencode-powergoal
-```
-
-### Via OpenCode plugin config
-
-Add to your `opencode.json`:
-
-```json
-{
-  "plugins": {
-    "powergoal": {
-      "type": "module",
-      "path": "node_modules/opencode-powergoal/src/index.ts",
-      "enable": true
-    }
-  }
-}
-```
-
-### Local deploy (development)
+### Local deploy
 
 ```bash
 pnpm run deploy
@@ -65,6 +42,28 @@ pnpm run deploy
 This strips test-only exports and installs a single-file plugin to
 `~/.config/opencode/plugins/opencode-powergoal.ts`. Restart OpenCode to
 pick up changes.
+
+### Manual install
+
+Clone the repo and point OpenCode to the source directly:
+
+```bash
+git clone https://github.com/lirrensi/opencode-powergoal.git
+```
+
+Then add to your `opencode.json`:
+
+```json
+{
+  "plugins": {
+    "powergoal": {
+      "type": "module",
+      "path": "path/to/opencode-powergoal/src/index.ts",
+      "enable": true
+    }
+  }
+}
+```
 
 ---
 
