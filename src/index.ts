@@ -21,15 +21,15 @@ type GoalState = {
 
 // ── constants ──
 
-const DWELL_MS = 30_000
-const FIRE_DEFER_MS = 100
+const DWELL_MS = 10_000
+const SHORT_DWELL_MS = 3_000
 const HANDLED = "__PGOAL_HANDLED__"
 
 const NO_GOAL = "No active power goal.\nUsage: /powergoal <objective>"
 const MSG_STOPPED = "Power goal stopped."
 const MSG_COMPLETED = "Power goal completed."
 const MSG_BLOCKED = "Power goal blocked."
-const MSG_ARMED = "Power Goal armed — fires after 30s of idle"
+const MSG_ARMED = "Power Goal armed — fires after idle"
 
 const DEFAULT_COMMAND_DESCRIPTION = "start or manage a persistent goal loop"
 
@@ -89,27 +89,36 @@ export const PowerGoalPlugin: Plugin = async ({ client }: any) => {
   let goal: GoalState | null = null
   let dwellTimer: ReturnType<typeof setTimeout> | null = null
   let dwellStartedAt = 0
+  let dwellDuration = 0
   let isIdle = false
   let inFlight = false
+  let pendingInitial = false
   let hb: ReturnType<typeof setInterval> | null = null
 
   const toast = (m: string, v = "info", d = 5000) =>
     client.tui.showToast({ body: { message: m, variant: v, duration: d } }).catch(() => {})
 
   const cancelDwell = () => {
-    if (dwellTimer) { clearTimeout(dwellTimer); dwellTimer = null; dwellStartedAt = 0 }
+    if (dwellTimer) { clearTimeout(dwellTimer); dwellTimer = null; dwellStartedAt = 0; dwellDuration = 0 }
   }
 
-  const startDwell = () => {
+  const startDwell = (dwellMs = DWELL_MS) => {
     if (!goal || goal.status !== "active") return
     cancelDwell()
     dwellStartedAt = Date.now()
+    dwellDuration = dwellMs
     dwellTimer = setTimeout(() => {
       dwellTimer = null
       dwellStartedAt = 0
+      dwellDuration = 0
       if (!goal || goal.status !== "active") return
-      fireFollowup()
-    }, DWELL_MS)
+      if (pendingInitial) {
+        pendingInitial = false
+        fireInitial()
+      } else {
+        fireFollowup()
+      }
+    }, dwellMs)
   }
 
   const fire = async (message: string) => {
@@ -143,6 +152,7 @@ export const PowerGoalPlugin: Plugin = async ({ client }: any) => {
     goal = null
     inFlight = false
     isIdle = false
+    pendingInitial = false
     if (hb) { clearInterval(hb); hb = null }
   }
 
@@ -151,7 +161,7 @@ export const PowerGoalPlugin: Plugin = async ({ client }: any) => {
       hb = setInterval(() => {
         if (!goal || goal.status !== "active") return
         const elapsed = fmtElapsed(Date.now() - goal.startedAt)
-        const dwellLeft = dwellStartedAt > 0 ? Math.round((DWELL_MS - (Date.now() - dwellStartedAt)) / 1000) : 0
+        const dwellLeft = dwellStartedAt > 0 ? Math.round((dwellDuration - (Date.now() - dwellStartedAt)) / 1000) : 0
         const status = dwellStartedAt > 0
           ? `⏳ dwell ${dwellLeft}s → fire`
           : isIdle ? "🟢 idle — waiting" : "🔴 active — processing"
@@ -293,11 +303,13 @@ export const PowerGoalPlugin: Plugin = async ({ client }: any) => {
       }
 
       goal = { objective: op.objective, status: "active", startedAt: Date.now(), followupCount: 0 }
+      pendingInitial = true
       toast(MSG_ARMED, "info", 5000)
       refreshHb()
-      // Defer fire so command handler throw doesn't race with TUI submission
-      setTimeout(() => { if (goal?.status === "active") fireInitial() }, FIRE_DEFER_MS)
-      startDwell()
+      if (isIdle) {
+        startDwell(SHORT_DWELL_MS)  // 3s → confirmed idle → fireInitial via pendingInitial
+      }
+      // not idle → no startDwell; session.idle will trigger startDwell(DWELL_MS) → fireInitial via pendingInitial
       throw new Error(HANDLED)
     },
   }

@@ -83,7 +83,7 @@ manage_goal({
 |--------|------------|------------|
 | **Purpose** | Endless autonomous loop | Goal-oriented persistent loop |
 | **Exit** | Time-based (duration expires) | Agent-driven (`manage_goal` tool) |
-| **Start** | `/cronoloop <minutes>` | `/powergoal <objective>` |
+| **Start** | `/chronoloop <minutes>` | `/powergoal <objective>` |
 | **Initial fire** | Waits for first idle | Fires immediately |
 | **Tool exposure** | None (hidden from agent) | `manage_goal` for completion |
 | **Completion hint** | Not applicable | Injected after 2nd follow-up |

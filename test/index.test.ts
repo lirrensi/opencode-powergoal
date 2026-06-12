@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest"
+import { describe, expect, test, vi, afterEach, beforeEach } from "vitest"
 import {
   parseCommand,
   fmtElapsed,
@@ -149,7 +149,8 @@ describe("PowerGoalPlugin", () => {
     expect(hooks).toHaveProperty("command.execute.before")
   })
 
-  test("/powergoal <objective> starts goal and fires initial message", async () => {
+  test("/powergoal <objective> starts goal and fires initial message after short dwell", async () => {
+    vi.useFakeTimers()
     const { PowerGoalPlugin } = await import("../src/index")
     const toasts: any[] = []
     const prompts: string[] = []
@@ -165,6 +166,9 @@ describe("PowerGoalPlugin", () => {
 
     const hooks = await PowerGoalPlugin({ client } as any)
 
+    // First signal idle so the plugin knows we're already idle
+    await hooks.event?.({ event: { type: "session.idle" } })
+
     await expect(
       hooks["command.execute.before"]?.({
         command: "powergoal",
@@ -173,16 +177,18 @@ describe("PowerGoalPlugin", () => {
       }),
     ).rejects.toThrow("__PGOAL_HANDLED__")
 
-    // Flush next-tick queue so deferred fire runs (matches 100ms delay)
-    await new Promise(r => setTimeout(r, 150))
+    // Advance past the 3s short dwell to trigger fireInitial via pendingInitial
+    await vi.advanceTimersByTimeAsync(3_100)
 
-    // Initial message fired immediately
+    // Initial message fired after short dwell
     expect(prompts).toHaveLength(1)
     expect(prompts[0]).toContain("# Started goal:")
     expect(prompts[0]).toContain("Implement auth")
 
     // Toast confirms arming
     expect(toasts.some((t) => t.message.includes("armed"))).toBe(true)
+
+    vi.useRealTimers()
   })
 
   test("/powergoal stop clears active goal", async () => {
