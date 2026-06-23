@@ -169,13 +169,18 @@ describe("PowerGoalPlugin", () => {
     // First signal idle so the plugin knows we're already idle
     await hooks.event?.({ event: { type: "session.idle" } })
 
-    await expect(
-      hooks["command.execute.before"]?.({
+    // /powergoal must silently clear the original command's output parts
+    // (no throw — that breaks the opencode plugin contract post-refactor)
+    const output = { parts: [{ type: "text" as const, text: "default template" }] }
+    await hooks["command.execute.before"]?.(
+      {
         command: "powergoal",
         sessionID: "s1",
         arguments: "Implement auth",
-      }),
-    ).rejects.toThrow("__PGOAL_HANDLED__")
+      },
+      output,
+    )
+    expect(output.parts).toEqual([])
 
     // Advance past the 3s short dwell to trigger fireInitial via pendingInitial
     await vi.advanceTimersByTimeAsync(3_100)
@@ -207,20 +212,24 @@ describe("PowerGoalPlugin", () => {
     const hooks = await PowerGoalPlugin({ client } as any)
 
     // Start a goal
-    await expect(
-      hooks["command.execute.before"]?.({
-        command: "powergoal",
-        arguments: "test goal",
-      }),
-    ).rejects.toThrow("__PGOAL_HANDLED__")
+    {
+      const out = { parts: [{ type: "text" as const, text: "t" }] }
+      await hooks["command.execute.before"]?.(
+        { command: "powergoal", arguments: "test goal" },
+        out,
+      )
+      expect(out.parts).toEqual([])
+    }
 
     // Stop it
-    await expect(
-      hooks["command.execute.before"]?.({
-        command: "powergoal",
-        arguments: "stop",
-      }),
-    ).rejects.toThrow("__PGOAL_HANDLED__")
+    {
+      const out = { parts: [{ type: "text" as const, text: "t" }] }
+      await hooks["command.execute.before"]?.(
+        { command: "powergoal", arguments: "stop" },
+        out,
+      )
+      expect(out.parts).toEqual([])
+    }
 
     expect(toasts.some((t) => t.message.includes("stopped"))).toBe(true)
   })
@@ -241,20 +250,24 @@ describe("PowerGoalPlugin", () => {
     const hooks = await PowerGoalPlugin({ client } as any)
 
     // Start a goal
-    await expect(
-      hooks["command.execute.before"]?.({
-        command: "powergoal",
-        arguments: "status test",
-      }),
-    ).rejects.toThrow("__PGOAL_HANDLED__")
+    {
+      const out = { parts: [{ type: "text" as const, text: "t" }] }
+      await hooks["command.execute.before"]?.(
+        { command: "powergoal", arguments: "status test" },
+        out,
+      )
+      expect(out.parts).toEqual([])
+    }
 
     // Check status
-    await expect(
-      hooks["command.execute.before"]?.({
-        command: "powergoal",
-        arguments: "",
-      }),
-    ).rejects.toThrow("__PGOAL_HANDLED__")
+    {
+      const out = { parts: [{ type: "text" as const, text: "t" }] }
+      await hooks["command.execute.before"]?.(
+        { command: "powergoal", arguments: "" },
+        out,
+      )
+      expect(out.parts).toEqual([])
+    }
 
     expect(toasts.some((t) => t.message.includes("Status: active"))).toBe(true)
     expect(toasts.some((t) => t.message.includes("status test"))).toBe(true)
@@ -275,12 +288,12 @@ describe("PowerGoalPlugin", () => {
 
     const hooks = await PowerGoalPlugin({ client } as any)
 
-    await expect(
-      hooks["command.execute.before"]?.({
-        command: "powergoal",
-        arguments: "",
-      }),
-    ).rejects.toThrow("__PGOAL_HANDLED__")
+    const out = { parts: [{ type: "text" as const, text: "t" }] }
+    await hooks["command.execute.before"]?.(
+      { command: "powergoal", arguments: "" },
+      out,
+    )
+    expect(out.parts).toEqual([])
 
     expect(toasts.some((t) => t.message.includes("No active power goal"))).toBe(true)
   })
@@ -301,20 +314,24 @@ describe("PowerGoalPlugin", () => {
     const hooks = await PowerGoalPlugin({ client } as any)
 
     // Start first goal
-    await expect(
-      hooks["command.execute.before"]?.({
-        command: "powergoal",
-        arguments: "first goal",
-      }),
-    ).rejects.toThrow("__PGOAL_HANDLED__")
+    {
+      const out = { parts: [{ type: "text" as const, text: "t" }] }
+      await hooks["command.execute.before"]?.(
+        { command: "powergoal", arguments: "first goal" },
+        out,
+      )
+      expect(out.parts).toEqual([])
+    }
 
     // Try to start second
-    await expect(
-      hooks["command.execute.before"]?.({
-        command: "powergoal",
-        arguments: "second goal",
-      }),
-    ).rejects.toThrow("__PGOAL_HANDLED__")
+    {
+      const out = { parts: [{ type: "text" as const, text: "t" }] }
+      await hooks["command.execute.before"]?.(
+        { command: "powergoal", arguments: "second goal" },
+        out,
+      )
+      expect(out.parts).toEqual([])
+    }
 
     expect(toasts.some((t) => t.message.includes("Already pursuing"))).toBe(true)
   })

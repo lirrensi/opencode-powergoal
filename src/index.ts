@@ -23,7 +23,6 @@ type GoalState = {
 
 const DWELL_MS = 10_000
 const SHORT_DWELL_MS = 3_000
-const HANDLED = "__PGOAL_HANDLED__"
 
 const NO_GOAL = "No active power goal.\nUsage: /powergoal <objective>"
 const MSG_STOPPED = "Power goal stopped."
@@ -257,7 +256,7 @@ export const PowerGoalPlugin: Plugin = async ({ client }: any) => {
       }
     },
 
-    "command.execute.before": async (input: any) => {
+    "command.execute.before": async (input: any, output: any) => {
       if (input.command !== "powergoal") return
 
       const op = parseCommand((input.arguments ?? "").trim())
@@ -265,52 +264,51 @@ export const PowerGoalPlugin: Plugin = async ({ client }: any) => {
       if (op.kind === "status") {
         if (!goal) {
           toast(NO_GOAL, "error")
-          throw new Error(HANDLED)
+        } else {
+          const elapsed = fmtElapsed(Date.now() - goal.startedAt)
+          toast(`Power Goal\nStatus: ${goal.status}\nObjective: ${goal.objective}\nElapsed: ${elapsed}`)
         }
-        const elapsed = fmtElapsed(Date.now() - goal.startedAt)
-        toast(`Power Goal\nStatus: ${goal.status}\nObjective: ${goal.objective}\nElapsed: ${elapsed}`)
-        throw new Error(HANDLED)
-      }
-
-      if (op.kind === "stop") {
+      } else if (op.kind === "stop") {
         if (!goal || goal.status !== "active") {
           toast("No active power goal to stop.", "error")
-          throw new Error(HANDLED)
+        } else {
+          const obj = goal.objective
+          clear()
+          toast(`${MSG_STOPPED} — ${obj}`)
         }
-        const obj = goal.objective
-        clear()
-        toast(`${MSG_STOPPED} — ${obj}`)
-        throw new Error(HANDLED)
-      }
-
-      if (op.kind === "complete") {
+      } else if (op.kind === "complete") {
         if (!goal || goal.status !== "active") {
           toast("No active power goal to complete.", "error")
-          throw new Error(HANDLED)
+        } else {
+          const obj = goal.objective
+          const elapsed = fmtElapsed(Date.now() - goal.startedAt)
+          clear()
+          toast(`${MSG_COMPLETED} — ${obj} (${elapsed})`)
         }
-        const obj = goal.objective
-        const elapsed = fmtElapsed(Date.now() - goal.startedAt)
-        clear()
-        toast(`${MSG_COMPLETED} — ${obj} (${elapsed})`)
-        throw new Error(HANDLED)
+      } else {
+        // start
+        if (goal?.status === "active") {
+          const elapsed = fmtElapsed(Date.now() - goal.startedAt)
+          toast(`Already pursuing: "${goal.objective}" (${elapsed})\n/powergoal stop first.`, "error")
+        } else {
+          goal = { objective: op.objective, status: "active", startedAt: Date.now(), followupCount: 0 }
+          pendingInitial = true
+          toast(MSG_ARMED, "info", 5000)
+          refreshHb()
+          if (isIdle) {
+            startDwell(SHORT_DWELL_MS)  // 3s → confirmed idle → fireInitial via pendingInitial
+          }
+          // not idle → no startDwell; session.idle will trigger startDwell(DWELL_MS) → fireInitial via pendingInitial
+        }
       }
 
-      // start
-      if (goal?.status === "active") {
-        const elapsed = fmtElapsed(Date.now() - goal.startedAt)
-        toast(`Already pursuing: "${goal.objective}" (${elapsed})\n/powergoal stop first.`, "error")
-        throw new Error(HANDLED)
+      // Silently abort the original /powergoal command by clearing its output parts.
+      // Throwing here is NOT supported by the opencode plugin contract — recent
+      // opencode versions (June 2026 refactor) propagate unhandled errors to the
+      // chat UI as a visible error block, which is the "spam" this guard avoids.
+      if (output && Array.isArray(output.parts)) {
+        output.parts.length = 0
       }
-
-      goal = { objective: op.objective, status: "active", startedAt: Date.now(), followupCount: 0 }
-      pendingInitial = true
-      toast(MSG_ARMED, "info", 5000)
-      refreshHb()
-      if (isIdle) {
-        startDwell(SHORT_DWELL_MS)  // 3s → confirmed idle → fireInitial via pendingInitial
-      }
-      // not idle → no startDwell; session.idle will trigger startDwell(DWELL_MS) → fireInitial via pendingInitial
-      throw new Error(HANDLED)
     },
   }
 }
