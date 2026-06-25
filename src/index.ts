@@ -306,10 +306,8 @@ export const PowerGoalPlugin: Plugin = async ({ client }: any) => {
       pendingInitial = true
       toast(MSG_ARMED, "info", 5000)
       refreshHb()
-      if (isIdle) {
-        startDwell(SHORT_DWELL_MS)  // 3s → confirmed idle → fireInitial via pendingInitial
-      }
-      // not idle → no startDwell; session.idle will trigger startDwell(DWELL_MS) → fireInitial via pendingInitial
+      // Always arm the dwell — session.idle may never fire after throw.
+      startDwell(isIdle ? SHORT_DWELL_MS : DWELL_MS)
       throw new Error(HANDLED)
     },
   }
