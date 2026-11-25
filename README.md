@@ -1,5 +1,10 @@
 # 🎯 Power Goal
 
+> **⛔ DISCONTINUED — OUTDATED.**
+> This plugin was written for an older version of OpenCode, before the v2 rewrite. The plugin API it targets was removed, so it no longer loads, and it is outdated.
+> It is **superseded by built-in functionality**: `/goal <objective>` plus the bundled `opencode.goal` plugin (OpenCode v2.2.1) — reviewer-decided done/continue/blocked, pause/resume/clear, round and stall limits. Strictly more control than `manage_goal` had.
+> Kept for history only. Do not install.
+
 **Persistent goal loop for OpenCode.**  
 Same TUI-injection mechanics as [ChronoLoop](https://github.com/lirrensi/opencode-chronoloop), but with goal semantics — the agent receives a persistent objective and can self-report completion via a tool.
 
